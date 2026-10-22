@@ -53,6 +53,7 @@ pub mod state;
 pub mod summary;
 pub mod tray;
 pub mod utils;
+pub mod webhook;
 pub mod whisper_engine;
 
 use audio::{list_audio_devices, AudioDevice, trigger_audio_permission};
@@ -763,6 +764,10 @@ pub fn run() {
             summary::summary_engine::commands::builtin_ai_get_available_summary_model,
             summary::summary_engine::commands::builtin_ai_get_recommended_model,
             openrouter::get_openrouter_models,
+            webhook::commands::get_webhook_settings,
+            webhook::commands::set_webhook_settings,
+            webhook::commands::send_webhook_test,
+            webhook::commands::get_last_recording_meeting_id,
             audio::recording_preferences::get_recording_preferences,
             audio::recording_preferences::set_recording_preferences,
             audio::recording_preferences::get_default_recordings_folder_path,

@@ -217,6 +217,10 @@ pub fn start_transcription_task<R: Runtime>(
                                             duration: chunk_duration,
                                         };
 
+                                        // Schedule a meeting-webhook post without waiting on the network.
+                                        // A failure here must not affect transcription.
+                                        crate::webhook::observe_transcript(&update);
+
                                         if let Err(e) = app_clone.emit("transcript-update", &update)
                                         {
                                             error!(

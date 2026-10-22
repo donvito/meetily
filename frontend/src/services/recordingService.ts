@@ -20,6 +20,7 @@ export interface RecordingStoppedPayload {
   message: string;
   folder_path?: string;
   meeting_name?: string;
+  meeting_id?: string | null;
 }
 
 // Bound the start invoke: > ~40s Bluetooth mic cold-start and ~90s worst-case
@@ -70,6 +71,14 @@ export class RecordingService {
    */
   async getRecordingMeetingName(): Promise<string | null> {
     return invoke<string | null>('get_recording_meeting_name');
+  }
+
+  /**
+   * Meeting id assigned when the latest recording started.
+   * Used if the stop event payload was missed before the SQLite save.
+   */
+  async getLastRecordingMeetingId(): Promise<string | null> {
+    return invoke<string | null>('get_last_recording_meeting_id');
   }
 
   /**

@@ -15,8 +15,14 @@ impl TranscriptsRepository {
         meeting_title: &str,
         transcripts: &[TranscriptSegment],
         folder_path: Option<String>,
+        meeting_id: Option<String>,
     ) -> Result<String, SqlxError> {
-        let meeting_id = format!("meeting-{}", Uuid::new_v4());
+        // Reuse the id assigned when the live recording started so webhook
+        // posts and the saved meeting refer to the same meeting.
+        let meeting_id = match meeting_id {
+            Some(id) if !id.trim().is_empty() && id.trim().len() <= 200 => id.trim().to_string(),
+            _ => format!("meeting-{}", Uuid::new_v4()),
+        };
 
         let mut conn = pool.acquire().await?;
         let mut transaction = conn.begin().await?;
