@@ -1,6 +1,9 @@
 name: "Release"
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       platforms:
@@ -42,6 +45,13 @@ jobs:
         id: get-version
         shell: bash
         run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "Using pushed tag version: $VERSION"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           BASE_VERSION=$(grep -o '"version": "[^"]*"' frontend/src-tauri/tauri.conf.json | cut -d'"' -f4)
           echo "Base version from tauri.conf.json: $BASE_VERSION"
 
@@ -128,7 +138,7 @@ jobs:
       platform: ${{ matrix.platform }}
       target: ${{ matrix.target }}
       build-args: ${{ matrix.args }}
-      sign-binaries: ${{ inputs.sign-binaries }}
+      sign-binaries: ${{ inputs.sign-binaries == true }}
       asset-prefix: "meetily"
       upload-artifacts: false  # tauri-action uploads directly to release
       release-id: ${{ needs.create-release.outputs.release-id }}
