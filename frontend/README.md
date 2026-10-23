@@ -138,6 +138,7 @@ For build and acceleration details, see:
 - [Building from Source](../docs/BUILDING.md)
 - [GPU Acceleration](../docs/GPU_ACCELERATION.md)
 - [Architecture](../docs/architecture.md)
+- [Live meeting webhook](../docs/WEBHOOK.md)
 
 ## Development
 

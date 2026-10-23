@@ -392,6 +392,7 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
             now.format("%Y-%m-%d_%H-%M-%S")
         )
     });
+    let meeting_title = effective_meeting_name.clone();
     manager.set_meeting_name(Some(effective_meeting_name));
 
     // Set up error callback
@@ -426,6 +427,9 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
     // mic-recovery budget). Shared with the other start path — see helper.
     finalize_recording_start();
     drop(engine_lifecycle_guard);
+
+    // Stable id for this recording. Webhook setup must not block or fail the start.
+    let meeting_id = crate::webhook::begin_session(&app, &meeting_title).await;
 
     // Start optimized parallel transcription task and store handle
     let task_handle = transcription::start_transcription_task(app.clone(), transcription_receiver);
@@ -471,7 +475,9 @@ pub async fn start_recording_with_meeting_name<R: Runtime>(
     app.emit("recording-started", serde_json::json!({
         "message": "Recording started successfully with parallel processing",
         "devices": ["Default Microphone", "Default System Audio"],
-        "workers": 3
+        "workers": 3,
+        "meeting_id": meeting_id,
+        "meeting_name": meeting_title
     })).map_err(|e| e.to_string())?;
 
     // Update tray menu to reflect recording state
@@ -579,6 +585,7 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
             now.format("%Y-%m-%d_%H-%M-%S")
         )
     });
+    let meeting_title = effective_meeting_name.clone();
     manager.set_meeting_name(Some(effective_meeting_name));
 
     // Set up error callback
@@ -613,6 +620,9 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
     // mic-recovery budget). Shared with the other start path — see helper.
     finalize_recording_start();
     drop(engine_lifecycle_guard);
+
+    // Stable id for this recording. Webhook setup must not block or fail the start.
+    let meeting_id = crate::webhook::begin_session(&app, &meeting_title).await;
 
     // Start optimized parallel transcription task and store handle
     let task_handle = transcription::start_transcription_task(app.clone(), transcription_receiver);
@@ -661,7 +671,9 @@ pub async fn start_recording_with_devices_and_meeting<R: Runtime>(
             mic_device_name.unwrap_or_else(|| "Default Microphone".to_string()),
             system_device_name.unwrap_or_else(|| "Default System Audio".to_string())
         ],
-        "workers": 3
+        "workers": 3,
+        "meeting_id": meeting_id,
+        "meeting_name": meeting_title
     })).map_err(|e| e.to_string())?;
 
     // Update tray menu to reflect recording state
@@ -1049,6 +1061,8 @@ pub async fn stop_recording<R: Runtime>(
     // Set recording flag to false
     info!("🔍 Setting IS_RECORDING to false");
     IS_RECORDING.store(false, Ordering::SeqCst);
+    // Stop webhook delivery with the recording. In-flight posts may finish; nothing new is queued.
+    let meeting_id = crate::webhook::end_session();
     // IS_RECORDING_STOPPING is cleared by _stopping_guard on scope exit.
 
     // Step 4.5: Prepare metadata for frontend (NO database save)
@@ -1085,7 +1099,8 @@ pub async fn stop_recording<R: Runtime>(
         serde_json::json!({
             "message": "Recording stopped - frontend will save after all transcripts received",
             "folder_path": folder_path_str,
-            "meeting_name": meeting_name_str
+            "meeting_name": meeting_name_str,
+            "meeting_id": meeting_id
         }),
     )
     .map_err(|e| e.to_string())?;

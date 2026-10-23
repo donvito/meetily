@@ -100,6 +100,7 @@ Whether you're a defense consultant, enterprise executive, legal professional, o
 - **Multi-Platform:** Works on macOS, Windows, and Linux.
 - **Open Source:** Meetily is open source and free to use.
 - **Flexible AI Provider Support:** Choose from Ollama (local), Claude, Groq, OpenRouter, or use your own OpenAI-compatible endpoint.
+- **Live meeting webhook:** While a recording is active, optionally POST finalized transcript lines to a webhook you configure, either when a wake word is spoken or on a timer. See [Webhook](docs/WEBHOOK.md).
 
 ## Installation
 
@@ -208,6 +209,8 @@ For more details, see the [Architecture documentation](docs/architecture.md).
 ## For Developers
 
 If you want to contribute to Meetily or build it from source, you'll need to have Rust and Node.js installed. For detailed build instructions, please see the [Building from Source guide](docs/BUILDING.md).
+
+Live webhook settings, the JSON payload, and the `wake_word`, `interval`, and `test` reasons are described in [docs/WEBHOOK.md](docs/WEBHOOK.md).
 
 ## Meetily Pro
 
