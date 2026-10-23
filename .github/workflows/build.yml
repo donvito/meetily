@@ -601,6 +601,31 @@ jobs:
           key: ${{ runner.os }}-onnxruntime-${{ inputs.target }}-${{ hashFiles('frontend/src-tauri/build/onnxruntime.rs') }}
 
 
+      - name: Generate ephemeral updater signing key
+        shell: bash
+        env:
+          HAS_TAURI_SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          if [ "$HAS_TAURI_SIGNING_KEY" = "true" ]; then
+            echo "Using TAURI_SIGNING_PRIVATE_KEY secret"
+            exit 0
+          fi
+          echo "::warning::TAURI_SIGNING_PRIVATE_KEY secret not set; using an ephemeral key. The updater will not accept these artifacts."
+          KEY_PATH="$RUNNER_TEMP/tauri-ephemeral.key"
+          cd frontend
+          pnpm exec tauri signer generate --ci -f -w "$KEY_PATH"
+          echo "EPHEMERAL_TAURI_SIGNING_PRIVATE_KEY=$KEY_PATH" >> "$GITHUB_ENV"
+
+      # Homebrew's OpenSSL 4 breaks llama.cpp's vendored cpp-httplib; the app does not need llama.cpp HTTPS.
+      - name: Disable OpenSSL for CMake builds (macOS)
+        if: contains(inputs.platform, 'macos')
+        shell: bash
+        run: |
+          TOOLCHAIN="$RUNNER_TEMP/no-openssl.cmake"
+          echo 'set(CMAKE_DISABLE_FIND_PACKAGE_OpenSSL ON)' > "$TOOLCHAIN"
+          echo "CMAKE_TOOLCHAIN_FILE=$TOOLCHAIN" >> "$GITHUB_ENV"
+          echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> "$GITHUB_ENV"
+
       - name: Build with Tauri
         id: tauri-build
         uses: tauri-apps/tauri-action@v0
@@ -614,7 +639,7 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ inputs.sign-binaries && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
           APPLE_SIGNING_IDENTITY: ${{ inputs.sign-binaries && env.CERT_ID || '' }}
           # Tauri updater signing (ALWAYS enabled for .sig files)
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || env.EPHEMERAL_TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # License validation RSA public key (embedded at build time)
           MEETILY_RSA_PUBLIC_KEY: ${{ secrets.MEETILY_RSA_PUBLIC_KEY }}
